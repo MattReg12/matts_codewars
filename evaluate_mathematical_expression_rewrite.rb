@@ -22,6 +22,7 @@ def format_numerals(arr)
 end
 
 def highest_prio_range(arr)
+  arr = arr.flatten
   if arr.any? { |item| ['(', '-('].include?(item) }
     find_parethentical_range(arr)
   elsif arr.any? { |item| ['*', '/'].include?(item) }
