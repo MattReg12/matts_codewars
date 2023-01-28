@@ -33,6 +33,7 @@ class Molecule
 
   def initialize(name = '')
     @name = name
+    @branches = []
     @atoms = []
     @locked = false
     @atom_count = 0
@@ -41,21 +42,19 @@ class Molecule
   def formula
     raise LockedMolecule unless @locked
 
-    ids = @atoms.flatten.map(&:element)
-    counts = ids.tally.to_a
+    ids = @branches.flatten.map(&:element)
+    counts = ids.tally
+    counts = remove_ones(counts).to_a
     counts = counts.map(&:join)
-    counts = counts.partition { |elem| ['H', 'C'].include?(elem[0]) }
-    counts.flatten.join.delete('1')
+    counts = counts.partition { |elem| ['H', 'C', 'O'].include?(elem[0]) }
+    counts.each(&:sort!)
+    counts.flatten.join
   end
 
-  def moelecular_weight
-    # returns a double value in g/mol
-    #throws error if molecule unlocked
-    @atoms.flatten.map(&:weight).sum
-  end
+  def molecular_weight
+    raise LockedMolecule unless @locked
 
-  def atoms
-    # gives list of atoms appended order of their creation
+    atoms.map(&:weight).sum
   end
 
   # Adds new 'branches' to the current molecule.
@@ -64,10 +63,14 @@ class Molecule
     carbons.each do |carbon|
       branch = []
       carbon.times { branch << add_atom('C') }
-      @atoms << branch
+      @branches << branch
     end
     bond_carbons
     self
+  end
+
+  def atoms
+    @atoms = @branches.flatten.sort_by(&:id)
   end
 
   def bounder(*arrs)
@@ -127,24 +130,40 @@ class Molecule
   end
 
   def bond_hydrogens
-    @atoms.each do |branch|
+    @branches.each do |branch|
       branch.size.times do |atom_i|
-        bonds = branch[atom_i].bonds
-        bonds.each_with_index do |bond, i|
-          if bond.nil?
-            h = Atom.new('H')
-            branch << h
-            bonds[i] = h
-          end
+        atom = branch[atom_i]
+        empty_bonds = atom.valence - atom.bonds.size
+        empty_bonds.times do
+          h = add_atom('H')
+          branch << h
+          atom.bonds << h
+          h.bonds << atom
         end
       end
     end
   end
 
   def bond_carbons
-    @atoms.each_branch do |branch|
+    @branches.each do |branch|
+      next if branch.size <= 1
       branch.each_with_index do |carbon, i|
+        if i.zero?
+          carbon.bonds << branch[i + 1]
+        elsif i == (branch.size - 1)
+          carbon.bonds << branch[i - 1]
+        else
+          carbon.bonds << branch[i - 1]
+          carbon.bonds << branch[i + 1]
+        end
+      end
+    end
+  end
 
+  def remove_ones(hash)
+    hash.each_key do |key|
+      hash[key] = '' if hash[key] == 1
+    end
   end
 end
 
@@ -160,12 +179,13 @@ class Atom
               'Cl' => 1, 'Br' => 1 }
 
   attr_accessor :element, :id
-  attr_reader :bonds, :weight
+  attr_reader :bonds, :weight, :valence
 
   def initialize(elt, id=1)
     @element = elt
     @weight = WEIGHT[elt]
-    @bonds = Array.new(VALENCE[elt])
+    @valence = VALENCE[elt]
+    @bonds = []
     @id = id
   end
 
@@ -182,11 +202,43 @@ class Atom
   end
 
   def to_s
+    if bonds.empty?
+      "Atom(#{element}.#{id})"
+    else
+      "Atom(#{element}.#{id}: #{bonds_to_s})"
+    end
     #"Atom(element.id: element1id,element2id,element3id...)". "Atom(C.24: C1,O6,N2,H)"
     # hydrogens go at the end and dont display its id number
     # if not bonded to another element, just return the element.id part like "Atom(C.1)"
   end
+
+  private
+
+  def bonds_to_s
+    str = bonds.map do |bond|
+      if bond.element == 'H'
+        'H'
+      else
+        "#{bond.element}#{bond.id}"
+      end
+    end
+    arr = bond_sort(str).join(',')
+  end
+
+  def bond_sort(str)
+    arr = Array.new(3) {[]}
+    str.each do |elem|
+      case elem[0]
+      when 'H' then arr[2] << elem
+      when 'C' then arr[0] << elem
+      when '0' then arr[0] << elem
+      else arr[1] << elem
+      end
+    end
+    arr.delete_if(&:empty?)
+    arr.each(&:sort!)
+  end
 end
 
-methane = Molecule.new("methane").brancher(1).closer()
+methane = Molecule.new("penis").brancher(1).closer()
 p methane.formula
