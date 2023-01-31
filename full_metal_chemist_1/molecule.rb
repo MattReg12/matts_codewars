@@ -1,22 +1,3 @@
-=begin
-
-branch - represents a chain of atoms bound together. When a branch is
-created, all of its atoms are carbons. Each branch of the molecule is ID'd
-by a number that matches its creation order.
-
-
-#methods that involve building molecule objects must be chainable i.e. they need
-to return molecule objects
-
-#building a molecule concosts in mutating the original object
-
-
-valence number of an atom -- the number of bounds it can hold. no more, no less
-
-molecular wieght -- the sum of the atomic weight of all its atoms
-
-=end
-
 class InvalidBond < StandardError
 # throw if you encounter a case where atom exceeeds valence number or is bound to itself
 # when exception thrown while it still has args left to handle, the modifications resulting
@@ -74,12 +55,14 @@ class Molecule
   end
 
   def bounder(*arrs)
-    #creates new bounds between 2 atoms of existing branches
-    #each arr gives 4 ints
-    # [c1, b1, c2, b2]   carbon and branch of first, carbon and branch of 2nd
-    #positions are 1 indexed. (1, 1, 5, 3) means bind first carbon on 1st branch to
-    #5th carbon on 3rd branch
-    # only positive ints
+    arrs.flatten!(1)
+    arrs.each do |arr|
+      atom_1 = @branches[arr[1] - 1][arr[0] - 1]
+      atom_2 = @branches[arr[3] - 1][arr[2] - 1]
+      atom_1.add_bond(atom_2)
+      atom_2.add_bond(atom_1)
+    end
+    self
   end
 
   def mutate(*arrs)
@@ -105,6 +88,7 @@ class Molecule
 
   def closer
     bond_hydrogens
+    lock_atoms
     @locked = true
     self
   end
@@ -127,6 +111,10 @@ class Molecule
   def add_atom(elem)
     @atom_count +=1
     Atom.new(elem, @atom_count)
+  end
+
+  def lock_atoms
+    @atoms.each { |atom| atom.locked = true }
   end
 
   def bond_hydrogens
@@ -178,7 +166,7 @@ class Atom
               'F' => 1, 'Mg' => 2, 'P' => 3, 'S' => 2,
               'Cl' => 1, 'Br' => 1 }
 
-  attr_accessor :element, :id
+  attr_accessor :element, :id, :locked
   attr_reader :bonds, :weight, :valence
 
   def initialize(elt, id=1)
@@ -187,6 +175,7 @@ class Atom
     @valence = VALENCE[elt]
     @bonds = []
     @id = id
+    @locked = false
   end
 
   def hash
@@ -207,9 +196,16 @@ class Atom
     else
       "Atom(#{element}.#{id}: #{bonds_to_s})"
     end
-    #"Atom(element.id: element1id,element2id,element3id...)". "Atom(C.24: C1,O6,N2,H)"
-    # hydrogens go at the end and dont display its id number
-    # if not bonded to another element, just return the element.id part like "Atom(C.1)"
+  end
+
+  def add_bond(other)
+    return if [@locked, eql?(other), already_bonded?(other)].any?
+
+    @bonds << other
+  end
+
+  def already_bonded?(other)
+    self.bonds.include?(other)
   end
 
   private
@@ -240,5 +236,5 @@ class Atom
   end
 end
 
-methane = Molecule.new("penis").brancher(1).closer()
-p methane.formula
+methane = Molecule.new('methane').brancher(9,1,1).bounder([[4,1,9,1], [5,1,1,2], [5,1,1,3]]).closer()
+p methane.atoms.map { |x| x.to_s }
