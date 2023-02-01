@@ -10,7 +10,7 @@ end
 
 
 class Molecule
-  attr_reader :name
+  attr_reader :name, :reader
 
   def initialize(name = '')
     @name = name
@@ -50,12 +50,7 @@ class Molecule
     self
   end
 
-  def atoms
-    @atoms = @branches.flatten.sort_by(&:id)
-  end
-
   def bounder(*arrs)
-    arrs.flatten!(1)
     arrs.each do |arr|
       atom_1 = @branches[arr[1] - 1][arr[0] - 1]
       atom_2 = @branches[arr[3] - 1][arr[2] - 1]
@@ -66,13 +61,22 @@ class Molecule
   end
 
   def mutate(*arrs)
-    # 1 indexed
+    arrs.each do |arr|
+      atom = @branches[arr[1] - 1][arr[0] - 1]
+      atom.mutate(arr[2])
+    end
     #[nc, nb, elt]  -- mutates the carbon (nc) in the branch (nb) to the chemical element (elt) given as string
     #id of atom instance stays the same
+    self
   end
 
   def add(*arrs)
-    # [nc, nb, elt] - adds a new atom (elt) on the carbon (nc) in the branch (nb)
+    arrs.each do |arr|
+      carbon_i, branch_i, elem = arr
+      carbon = @branches[branch_i - 1][carbon_i - 1]
+      atom.add_bond(elem)
+    end
+    self
     # Atoms added this way are not considered as being part of the branch they are bounded to
     #and aren't considered a new branch of the molecule.
   end
@@ -88,7 +92,6 @@ class Molecule
 
   def closer
     bond_hydrogens
-    lock_atoms
     @locked = true
     self
   end
@@ -110,11 +113,9 @@ class Molecule
   # creates atom to be added to element and increments atom_count counter
   def add_atom(elem)
     @atom_count +=1
-    Atom.new(elem, @atom_count)
-  end
-
-  def lock_atoms
-    @atoms.each { |atom| atom.locked = true }
+    atom = Atom.new(elem, @atom_count)
+    @atoms << atom
+    atom
   end
 
   def bond_hydrogens
@@ -166,8 +167,8 @@ class Atom
               'F' => 1, 'Mg' => 2, 'P' => 3, 'S' => 2,
               'Cl' => 1, 'Br' => 1 }
 
-  attr_accessor :element, :id, :locked
-  attr_reader :bonds, :weight, :valence
+  attr_accessor :element
+  attr_reader :bonds, :weight, :valence, :id
 
   def initialize(elt, id=1)
     @element = elt
@@ -175,7 +176,6 @@ class Atom
     @valence = VALENCE[elt]
     @bonds = []
     @id = id
-    @locked = false
   end
 
   def hash
@@ -199,16 +199,22 @@ class Atom
   end
 
   def add_bond(other)
-    return if [@locked, eql?(other), already_bonded?(other)].any?
+    raise InvalidBond if eql?(other) || (bonds.size == valence)
 
     @bonds << other
   end
 
-  def already_bonded?(other)
-    self.bonds.include?(other)
+  def mutate(elt)
+    raise InvalidBond if VALENCE[elt] < bonds.size
+
+    self.element = elt
+    self.weight = WEIGHT[elt]
+    self.valence = VALENCE[elt]
   end
 
   private
+
+  attr_writer :weight, :valence
 
   def bonds_to_s
     str = bonds.map do |bond|
@@ -232,9 +238,6 @@ class Atom
       end
     end
     arr.delete_if(&:empty?)
-    arr.each(&:sort!)
+    arr.each { |sub_arr| sub_arr.sort_by! { |str| str[1..-1].to_i } }
   end
 end
-
-methane = Molecule.new('methane').brancher(9,1,1).bounder([[4,1,9,1], [5,1,1,2], [5,1,1,3]]).closer()
-p methane.atoms.map { |x| x.to_s }
