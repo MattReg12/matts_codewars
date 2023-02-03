@@ -6,8 +6,11 @@ end
 class LockedMolecule < StandardError
 end
 
+class UnlockedMolecule < StandardError
+end
+
 class Molecule
-attr_reader :name, :atoms
+attr_reader :name, :atoms, :locked
 
   def initialize(name = '')
     @name = name
@@ -18,7 +21,7 @@ attr_reader :name, :atoms
   end
 
   def formula
-    raise LockedMolecule unless @locked
+    raise UnlockedMolecule unless locked
 
     ids = atoms.partition { |atom| ['H', 'C', 'O'].include?(atom.element) }
     ids.each { |atom_arr| atom_arr.sort_by!(&:element) }
@@ -33,12 +36,14 @@ attr_reader :name, :atoms
   end
 
   def molecular_weight
-    raise LockedMolecule unless @locked
+    raise UnlockedMolecule unless locked
 
     atoms.map(&:weight).sum
   end
 
   def brancher(*carbons)
+    raise LockedMolecule if locked
+
     p ['brancher', carbons]
     carbons.each do |carbon|
       branch = []
@@ -50,6 +55,8 @@ attr_reader :name, :atoms
   end
 
   def bounder(*arrs)
+    raise LockedMolecule if locked
+
     p self
     p ['bounder', arrs]
     arrs.each do |carbon_i1, branch_i1, carbon_i2, branch_i2|
@@ -61,6 +68,8 @@ attr_reader :name, :atoms
   end
 
   def mutate(*arrs)
+    raise LockedMolecule if locked
+
     p self
     p ['mutate', arrs]
     arrs.each do |carbon_i, branch_i, elt|
@@ -71,17 +80,24 @@ attr_reader :name, :atoms
   end
 
   def add(*arrs)
+    raise LockedMolecule if locked
+
     p ['add', arrs]
     arrs.each do |carbon_i, branch_i, elem|
-      carbon = @branches[branch_i - 1][carbon_i - 1]
+      base = @branches[branch_i - 1][carbon_i - 1]
+      raise InvalidBond if base.fully_bonded?
+
       atom = add_atom(elem)
-      carbon.add_bond(atom)
+      base.add_bond(atom)
     end
     self
   end
 
   def add_chaining(carbon_i, branch_i, *elts)
-    p ['add_chaining']
+    raise LockedMolecule if locked
+    p ['add_chaining', carbon_i, branch_i, elts]
+    raise InvalidBond if chained_monovalence?(elts)
+
     base = @branches[branch_i - 1][carbon_i - 1]
     unless base.fully_bonded?
       elts.map! { |elt| add_atom(elt) }
@@ -92,6 +108,8 @@ attr_reader :name, :atoms
   end
 
   def closer
+    raise LockedMolecule if locked
+    puts 'locking'
     bond_hydrogens
     @locked = true
     self
@@ -136,6 +154,10 @@ attr_reader :name, :atoms
     chain.each_with_index do |atom, i|
       atom.add_bond(chain[i + 1]) unless i == last_i
     end
+  end
+
+  def chained_monovalence?(elts)
+    elts[0..-2].any? { |elt| Atom.new(elt).valence == 1 }
   end
 end
 
