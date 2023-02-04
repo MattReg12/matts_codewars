@@ -116,7 +116,9 @@ attr_reader :name, :atoms, :locked
   end
 
   def unlock
-    #makes molecule mutable
+    @locked = false
+    unbond_hydrogens
+
     #removes hydrogens and any empty branches
     #throw EmptyMolecule exception if no branches left
     #the ids of the remaining atoms must be continous again starting at 1
@@ -149,6 +151,11 @@ attr_reader :name, :atoms, :locked
     end
   end
 
+  def unbond_hydrogens
+    hydrogens = atoms.select { |atom| atom.element == 'H' }
+
+  end
+
   def chain_bonder(chain)
     last_i = chain.size - 1
     chain.each_with_index do |atom, i|
@@ -158,6 +165,10 @@ attr_reader :name, :atoms, :locked
 
   def chained_monovalence?(elts)
     elts[0..-2].any? { |elt| Atom.new(elt).valence == 1 }
+  end
+
+  def update_ids
+
   end
 end
 
