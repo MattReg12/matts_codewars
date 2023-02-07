@@ -9,6 +9,9 @@ end
 class UnlockedMolecule < StandardError
 end
 
+class EmptyMolecule < StandardError
+end
+
 class Molecule
 attr_reader :name, :atoms, :locked
 
@@ -118,7 +121,7 @@ attr_reader :name, :atoms, :locked
   def unlock
     @locked = false
     unbond_hydrogens
-
+    remove_branches
     #removes hydrogens and any empty branches
     #throw EmptyMolecule exception if no branches left
     #the ids of the remaining atoms must be continous again starting at 1
@@ -152,8 +155,15 @@ attr_reader :name, :atoms, :locked
   end
 
   def unbond_hydrogens
-    hydrogens = atoms.select { |atom| atom.element == 'H' }
+    size = atoms.size
+    atoms.delete_if { |atom| atom.element == 'H' }
+    @atom_count -= (atoms.size - size)
+  end
 
+  def remove_branches
+    raise EmptyMolecule if @branches.all?(&:empty?)
+
+    @branches.delete_if(&:empty?)
   end
 
   def chain_bonder(chain)
