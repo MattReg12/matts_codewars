@@ -1,4 +1,5 @@
 require 'set'
+require 'pp'
 
 class InvalidBond < StandardError
 end
@@ -79,15 +80,16 @@ attr_reader :name, :atoms, :locked
       atom = @branches[branch_i - 1][carbon_i - 1]
       atom.mutate(elt)
     end
-    p self
+    self
   end
 
   def add(*arrs)
     raise LockedMolecule if locked
-
+    binding.pry
     p ['add', arrs]
     arrs.each do |carbon_i, branch_i, elem|
       base = @branches[branch_i - 1][carbon_i - 1]
+      binding.pry
       raise InvalidBond if base.fully_bonded?
 
       atom = add_atom(elem)
@@ -122,8 +124,7 @@ attr_reader :name, :atoms, :locked
     @locked = false
     unbond_hydrogens
     remove_branches
-    #the ids of the remaining atoms must be continous again starting at 1
-    #must be modifiable again in any manner
+    update_ids
     self
   end
 
@@ -152,15 +153,15 @@ attr_reader :name, :atoms, :locked
   end
 
   def unbond_hydrogens
-    size = atoms.size
     atoms.delete_if { |atom| atom.element == 'H' }
-    @atom_count -= (atoms.size - size)
+    @branches.each { |branch| branch.delete_if { |atom| atom.element == 'H'} }
+    atoms.each { |atom| atom.bonds.delete_if { |bond| bond.element == 'H'} }
+    @atom_count = atoms.size
   end
 
   def remove_branches
-    raise EmptyMolecule if @branches.all?(&:empty?)
-
     @branches.delete_if(&:empty?)
+    raise EmptyMolecule if @branches.all?(&:empty?)
   end
 
   def chain_bonder(chain)
@@ -176,8 +177,10 @@ attr_reader :name, :atoms, :locked
 
   def update_ids
     @atoms.each_with_index do |atom, i|
-      next if i.zero?
-      atom.id = (atoms[i - 1].id + 1)
+      if i.zero?
+        atom.id = 1
+      else atom.id = (atoms[i - 1].id + 1)
+      end
     end
   end
 end
@@ -193,8 +196,8 @@ class Atom
               'F' => 1, 'Mg' => 2, 'P' => 3, 'S' => 2,
               'Cl' => 1, 'Br' => 1 }
 
-  attr_accessor :element
-  attr_reader :bonds, :weight, :valence, :id
+  attr_accessor :element, :id
+  attr_reader :bonds, :weight, :valence
 
   def initialize(elt, id=1)
     @element = elt
@@ -269,3 +272,6 @@ class Atom
     arr
   end
 end
+
+m = Molecule.new('methane').brancher(1,5).bounder([2, 2, 5, 2], [4, 2, 1, 1]).mutate([1,1,'H']).closer.unlock.add([2,1,'P'])
+binding.pry
