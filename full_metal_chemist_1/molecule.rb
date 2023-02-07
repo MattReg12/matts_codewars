@@ -122,10 +122,7 @@ attr_reader :name, :atoms, :locked
     @locked = false
     unbond_hydrogens
     remove_branches
-    #removes hydrogens and any empty branches
-    #throw EmptyMolecule exception if no branches left
     #the ids of the remaining atoms must be continous again starting at 1
-    # if you end up with atoms that arent connected to the branches of the unlocked molecule, keep them anyways
     #must be modifiable again in any manner
     self
   end
@@ -178,7 +175,10 @@ attr_reader :name, :atoms, :locked
   end
 
   def update_ids
-
+    @atoms.each_with_index do |atom, i|
+      next if i.zero?
+      atom.id = (atoms[i - 1].id + 1)
+    end
   end
 end
 
