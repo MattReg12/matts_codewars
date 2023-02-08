@@ -1,5 +1,4 @@
 require 'set'
-require 'pp'
 
 class InvalidBond < StandardError
 end
@@ -48,7 +47,6 @@ attr_reader :name, :atoms, :locked
   def brancher(*carbons)
     raise LockedMolecule if locked
 
-    p ['brancher', carbons]
     carbons.each do |carbon|
       branch = []
       carbon.times { branch << add_atom('C') }
@@ -61,21 +59,17 @@ attr_reader :name, :atoms, :locked
   def bounder(*arrs)
     raise LockedMolecule if locked
 
-    p self
-    p ['bounder', arrs]
     arrs.each do |carbon_i1, branch_i1, carbon_i2, branch_i2|
       atom_1 = @branches[branch_i1 - 1][carbon_i1 - 1]
       atom_2 = @branches[branch_i2 - 1][carbon_i2 - 1]
       atom_1.add_bond(atom_2)
     end
-    p self
+    self
   end
 
   def mutate(*arrs)
     raise LockedMolecule if locked
 
-    p self
-    p ['mutate', arrs]
     arrs.each do |carbon_i, branch_i, elt|
       atom = @branches[branch_i - 1][carbon_i - 1]
       atom.mutate(elt)
@@ -85,11 +79,9 @@ attr_reader :name, :atoms, :locked
 
   def add(*arrs)
     raise LockedMolecule if locked
-    binding.pry
-    p ['add', arrs]
+
     arrs.each do |carbon_i, branch_i, elem|
       base = @branches[branch_i - 1][carbon_i - 1]
-      binding.pry
       raise InvalidBond if base.fully_bonded?
 
       atom = add_atom(elem)
@@ -100,21 +92,17 @@ attr_reader :name, :atoms, :locked
 
   def add_chaining(carbon_i, branch_i, *elts)
     raise LockedMolecule if locked
-    p ['add_chaining', carbon_i, branch_i, elts]
-    raise InvalidBond if chained_monovalence?(elts)
 
     base = @branches[branch_i - 1][carbon_i - 1]
-    unless base.fully_bonded?
-      elts.map! { |elt| add_atom(elt) }
-      elts.prepend(base)
-      chain_bonder(elts)
-    end
+    raise InvalidBond if chained_monovalence?(elts) || base.fully_bonded?
+    elts.map! { |elt| add_atom(elt) }
+    elts.prepend(base)
+    chain_bonder(elts)
     self
   end
 
   def closer
     raise LockedMolecule if locked
-    puts 'locking'
     bond_hydrogens
     @locked = true
     self
@@ -160,8 +148,9 @@ attr_reader :name, :atoms, :locked
   end
 
   def remove_branches
-    @branches.delete_if(&:empty?)
     raise EmptyMolecule if @branches.all?(&:empty?)
+
+    @branches.delete_if(&:empty?)
   end
 
   def chain_bonder(chain)
@@ -208,7 +197,7 @@ class Atom
   end
 
   def add_bond(other)
-    raise InvalidBond if [eql?(other), bonds.size == valence, other.bonds.size == valence].any?
+    raise InvalidBond if [eql?(other), bonds.size == valence, other.bonds.size == other.valence].any?
 
     other.bonds << self
     @bonds << other
@@ -272,6 +261,3 @@ class Atom
     arr
   end
 end
-
-m = Molecule.new('methane').brancher(1,5).bounder([2, 2, 5, 2], [4, 2, 1, 1]).mutate([1,1,'H']).closer.unlock.add([2,1,'P'])
-binding.pry
