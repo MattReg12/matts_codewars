@@ -14,7 +14,7 @@ P: Build an interpreter that processes assembler like commands,
     -mul x, y
     -div x, y
     -cmp x, y --   <=> equiv
-
+    -
 
   parsing commands
     -remove comments
@@ -24,7 +24,11 @@ P: Build an interpreter that processes assembler like commands,
     -split all strings further on blank space, handle empty arrays
     -perhaps convert ints to integer type to avoid multiple to_int calls
 
+  program flow --
+    -already here
 
+  -defining subroutines
+    -define_method(:name) do
 
 
 
@@ -59,16 +63,15 @@ end
 class Program
   attr_reader :regs
 
-  def initialize(instructions)
-    @inst_set = parse(instructions)
+  def initialize(main)
+    @main = parse(main)
     @regs = {}
-    @seq_num = 0
+    @cmp_val = nil
   end
 
-  def execute
-    until @inst_set[@seq_num].nil?
-      assemble(@inst_set[@seq_num])
-      @seq_num += 1
+  def execute(routine=@main)
+    routine.each do |inx|
+      assemble(inx)
     end
   end
 
@@ -79,20 +82,16 @@ class Program
     arg ? send(fx, var, arg) : send(fx, var)
   end
 
-  def mov(variable, value)
-    regs[variable] = regs.fetch(value, value.to_i)
+  def mov(reg, value)
+    regs[reg] = regs.fetch(value, value.to_i)
   end
 
-  def inc(variable)
-    regs[variable] += 1
+  def inc(reg)
+    regs[reg] += 1
   end
 
-  def dec(variable)
-    regs[variable] -= 1
-  end
-
-  def jnz(variable, steps)
-    @seq_num = (@seq_num - 1 + steps.to_i) unless regs.fetch(variable, variable.to_i).zero?
+  def dec(reg)
+    regs[reg] -= 1
   end
 
   private
