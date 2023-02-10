@@ -23,12 +23,13 @@ P: Build an interpreter that processes assembler like commands,
     -split string on double new line, this will break the program into a main call stack followed by defined subroutines
     -split all strings further on blank space, handle empty arrays
     -perhaps convert ints to integer type to avoid multiple to_int calls
+    -define @subroutines hash - symbol as names, remove ret, store others as steps
 
   program flow --
-    -already here
+    -use internal iterators with execute function
 
   -defining subroutines
-    -define_method(:name) do
+    helper method in initialize - define
 
 
 
@@ -44,15 +45,7 @@ A:
 
 
 C:
-
-
 =end
-
-
-
-
-
-
 
 def simple_assembler(program)
   p = Program.new(program)
@@ -66,7 +59,7 @@ class Program
   def initialize(main)
     @main = parse(main)
     @regs = {}
-    @cmp_val = nil
+    @prev_cmp = nil
   end
 
   def execute(routine=@main)
@@ -83,7 +76,7 @@ class Program
   end
 
   def mov(reg, value)
-    regs[reg] = regs.fetch(value, value.to_i)
+    regs[reg] = reg_value(value)
   end
 
   def inc(reg)
@@ -94,7 +87,31 @@ class Program
     regs[reg] -= 1
   end
 
+  def add(reg, val)
+    regs[reg] += value(val)
+  end
+
+  def sub(reg, val)
+    regs[reg] -= value(val)
+  end
+
+  def mul(reg, val)
+    regs[reg] *= value(val)
+  end
+
+  def div(reg, val)
+    regs[reg] /= value(val)
+  end
+
+  def cpm(reg_one, reg_two)
+    value(reg_one) <=> value(reg_two)
+  end
+
   private
+
+  def reg_value(reg)
+    regs.fetch(reg, reg.to_i)
+  end
 
   def parse(instructions)
 
@@ -117,9 +134,6 @@ end
       sub   d, c
       ret
   "
-
-
-
 
 x = program_mod.gsub(/\;.*$/, '')
 main, *fxs = x.strip.split("\n\n").map { |y| y.split("\n") }.each { |z| z.map!(&:split) }.delete_if(&:empty?)
