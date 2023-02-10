@@ -87,27 +87,57 @@ class Program
     regs[reg] -= 1
   end
 
-  def add(reg, val)
-    regs[reg] += value(val)
+  def add(reg, x)
+    regs[reg] += value(x)
   end
 
-  def sub(reg, val)
-    regs[reg] -= value(val)
+  def sub(reg, x)
+    regs[reg] -= value(x)
   end
 
-  def mul(reg, val)
-    regs[reg] *= value(val)
+  def mul(reg, x)
+    regs[reg] *= value(x)
   end
 
-  def div(reg, val)
-    regs[reg] /= value(val)
+  def div(reg, x)
+    regs[reg] /= value(x)
   end
 
-  def cpm(reg_one, reg_two)
+  def cmp(reg_one, reg_two)
     value(reg_one) <=> value(reg_two)
   end
 
-  private
+  def jmp(subroutine)
+
+  end
+
+  def jne(subroutine)
+
+  end
+
+  def je(subroutine)
+
+  end
+
+  def jge(subroutine)
+
+  end
+
+  def jg(subroutine)
+
+  end
+
+  def jle(subroutine)
+
+  end
+
+  def jl(subroutine)
+
+  end
+
+  def call(subroutine)
+
+  end
 
   def reg_value(reg)
     regs.fetch(reg, reg.to_i)
