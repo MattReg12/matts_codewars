@@ -70,9 +70,10 @@ module Tokenable
   end
 
   def remove_commas(routine)
-    routine.each do |instruc|
-      unless instruc.first == 'msg'
-      instruc.join(' ').delete
+    routine.each do |fx, arg_one, _|
+      if arg_one
+        arg_one.delete!(',') unless fx == 'msg'
+      end
     end
   end
 end
@@ -80,7 +81,7 @@ end
 class Program
   include Tokenable
 
-  attr_reader :regs, :output, :main, :subs
+  attr_reader :regs, :output
 
   def initialize(main)
     @main = parse(main)
@@ -94,9 +95,9 @@ class Program
     end
   end
 
-  #private
+  private
 
-  #attr_accessor :prev_cmp
+  attr_accessor :prev_cmp
 
   def assemble(instruction)
     fx, var, arg = instruction
@@ -182,8 +183,8 @@ class Program
   def parse(instrux)
     instrux = remove_comments(instrux)
     main, *subs = routines(instrux)
-    #subs.map! { |sub| tokenize(sub) }
-    #record(subs)
+    subs.map! { |sub| tokenize(sub) }
+    record(subs)
     tokenize(main)
   end
 
