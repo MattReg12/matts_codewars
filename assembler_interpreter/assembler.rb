@@ -180,6 +180,10 @@ class Program
     @output = args.map { |arg| msg_value(arg) }.join
   end
 
+  def call(sub)
+    execute(@subs[sub])
+  end
+
   def parse(instrux)
     instrux = remove_comments(instrux)
     main, *subs = routines(instrux)
@@ -196,37 +200,18 @@ class Program
   end
 end
 
-program_fibonacci = "
-    mov   a, 8            ; value
-    mov   b, 0            ; next
-    mov   c, 0            ; counter
-    mov   d, 0            ; first
-    mov   e, 1            ; second
-    call  proc_fib
-    call  print
-    end
+program = "
+; My first program
+mov  a, 5
+inc  a
+call function
+msg  '(5+1)/2 = ', a    ; output message
+end
 
-    proc_fib:
-        cmp   c, 2
-        jl    func_0
-        mov   b, d
-        add   b, e
-        mov   d, e
-        mov   e, b
-        inc   c
-        cmp   c, a
-        jle   proc_fib
-        ret
-
-    func_0:
-        mov   b, c
-        inc   c
-        jmp   proc_fib
-
-    print:
-        msg   'Term ', a, ' of Fibonacci series is: ', b        ; output text
-        ret
-    "
+function:
+    div  a, 2
+    ret
+"
 
 binding.pry
 
