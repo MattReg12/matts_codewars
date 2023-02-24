@@ -64,18 +64,35 @@ module Tokenable
   end
 
   def tokenize(routine)
-    routine = routine.split("\n").map { |instruc| instruc.split }
+    routine = routine.split("\n").map do |instruc|
+      if instruc.match?(/^ *msg/)
+        msg_token(instruc)
+      else instruc.split
+      end
+    end
     routine = remove_commas(routine)
     routine
   end
 
   def remove_commas(routine)
-    routine.each do |fx, arg_one, _|
+    routine.each do |fx, arg_one|
       if arg_one
         arg_one.delete!(',') unless fx == 'msg'
       end
     end
   end
+
+  def msg_token(instruc)
+    tokenized = ['msg']
+    instruc.sub!('msg', '')
+    instruc.strip!.squeeze!(' ')
+    tokenized += instruc.split(',')
+    tokenized.each do |token|
+      token.strip!
+      token.delete!("'")
+    end
+  end
+
 end
 
 class Program
@@ -97,15 +114,17 @@ class Program
 
   private
 
-  attr_accessor :prev_cmp
+  attr_accessor :prev_cmp, :subs
 
   def assemble(instruction)
     fx, var, arg = instruction
+    return if ['end', 'ret'].include?(fx)
+
     arg ? send(fx, var, arg) : send(fx, var)
   end
 
-  def mov(reg, value)
-    regs[reg] = reg_value(value)
+  def mov(reg, init_val)
+    regs[reg] = value(init_val)
   end
 
   def inc(reg)
@@ -168,7 +187,7 @@ class Program
     jmp(label) if prev_cmp.negative?
   end
 
-  def reg_value(reg)
+  def value(reg)
     regs.fetch(reg, reg.to_i)
   end
 
@@ -177,11 +196,11 @@ class Program
   end
 
   def msg(*args)
-    @output = args.map { |arg| msg_value(arg) }.join
+    @output = args.map { |arg| msg_value(arg) }.join().delete("'")
   end
 
   def call(sub)
-    execute(@subs[sub])
+    execute(@subs[sub.intern])
   end
 
   def parse(instrux)
@@ -194,8 +213,9 @@ class Program
 
   def record(subs)
     @subs = {}
-    subs.each do |sub|
-      @subs[sub.first.first] = sub[1..-1]
+    subs.each do |fx, *routine|
+      fx = fx.first.chop.intern
+      @subs[fx] = routine
     end
   end
 end
