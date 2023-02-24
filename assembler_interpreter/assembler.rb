@@ -1,52 +1,3 @@
-=begin
-
-P: Build an interpreter that processes assembler like commands,
-
-  Input: Multiline string
-
-  Output: If no `end` instruction then output -1 as int. Else output the string stored by the command
-  `msg` earlier in the program.
-
-  basic commands to add
-    x is content of register and y is register or int - This is a pain
-    -add x, y
-    -sub x, y
-    -mul x, y
-    -div x, y
-    -cmp x, y --   <=> equiv
-    -
-
-  parsing commands
-    -remove comments
-      substitue ;.... EOL with nothing.
-    -remove trailing and leading spaces/new lines
-    -split string on double new line, this will break the program into a main call stack followed by defined subroutines
-    -split all strings further on blank space, handle empty arrays
-    -perhaps convert ints to integer type to avoid multiple to_int calls
-    -define @subroutines hash - symbol as names, remove ret, store others as steps
-
-  program flow --
-    -use internal iterators with execute function
-
-  -defining subroutines
-    helper method in initialize - define
-
-
-
-  Qs -   What if no msg command and end?
-
-E:
-
-
-D:
-
-
-A:
-
-
-C:
-=end
-
 def simple_assembler(program)
   p = Program.new(program)
   p.execute
@@ -219,19 +170,3 @@ class Program
     end
   end
 end
-
-program = "
-; My first program
-mov  a, 5
-inc  a
-call function
-msg  '(5+1)/2 = ', a    ; output message
-end
-
-function:
-    div  a, 2
-    ret
-"
-
-binding.pry
-
